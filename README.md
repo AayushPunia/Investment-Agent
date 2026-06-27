@@ -1,5 +1,7 @@
 # AlphaLens — AI Investment Research Agent
 
+🚀 **Live Demo:** [https://investment-agent-v1.vercel.app/](https://investment-agent-v1.vercel.app/)
+
 **AlphaLens** is an AI-powered investment research terminal that analyzes any publicly traded company and delivers a structured **INVEST / PASS / MONITOR** verdict. Enter a company name — get a complete research report with financial metrics, competitive analysis, news sentiment, and a scored recommendation.
 
 Built as a full-stack Next.js application powered by a 6-node LangGraph pipeline.
