@@ -28,7 +28,7 @@ AlphaLens automates the entire equity research workflow in under 60 seconds:
 ### Prerequisites
 - Node.js 18+ and npm
 - Groq API key ([get one here](https://console.groq.com) — free, no credit card needed)
-- DuckDuckGo search requires **no API key**
+- Serper API key ([get one here](https://serper.dev) — free 2,500 searches/month)
 
 ### Setup
 
@@ -41,8 +41,9 @@ npm install --legacy-peer-deps
 
 # 3. Set up environment variables
 cp .env.local.example .env.local
-# Edit .env.local and add your Groq API key:
+# Edit .env.local and add your API keys:
 #   GROQ_API_KEY=gsk_...
+#   SERPER_API_KEY=...
 
 # 4. Start the development server
 npm run dev
@@ -66,22 +67,22 @@ AlphaLens uses a sequential LangGraph `StateGraph` with 6 specialized nodes:
 │    │                                                        │
 │    ▼                                                        │
 │  ┌──────────────────┐                                       │
-│  │ 1. Resolve Ticker │  DuckDuckGo search → LLM extraction │
+│  │ 1. Resolve Ticker │  Serper search → LLM extraction     │
 │  │    (AAPL, RELIANCE.NS)                                  │
 │  └────────┬─────────┘                                       │
 │           ▼                                                 │
 │  ┌──────────────────┐                                       │
-│  │ 2. Fetch Financials│  Yahoo Finance API → metrics       │
+│  │ 2. Fetch Financials│  Serper search → LLM metrics extract│
 │  │    (P/E, margins, D/E)                                  │
 │  └────────┬─────────┘                                       │
 │           ▼                                                 │
 │  ┌──────────────────┐                                       │
-│  │ 3. Search News   │  DDG × 2 queries → 8 articles        │
+│  │ 3. Search News   │  Serper × 2 queries → 8 articles     │
 │  │    (earnings, outlook)                                   │
 │  └────────┬─────────┘                                       │
 │           ▼                                                 │
 │  ┌──────────────────┐                                       │
-│  │ 4. Analyze        │  DDG + LLM → moat assessment        │
+│  │ 4. Analyze        │  Serper + LLM → moat assessment     │
 │  │    Competitors    │                                      │
 │  └────────┬─────────┘                                       │
 │           ▼                                                 │
@@ -122,8 +123,8 @@ Verdict:
 |---|---|
 | **Next.js 14 (App Router)** | Full-stack in one repo — API routes, SSR, and streaming out of the box. Ideal for a 7-day build sprint where backend/frontend separation would add unnecessary complexity. |
 | **Groq (llama-3.3-70b-versatile)** | Fastest free LLM inference available. Llama 3.3 70B matches GPT-4o-mini quality for structured extraction and analytical tasks. Free tier is generous and requires no credit card. |
-| **DuckDuckGo over Tavily/SerpAPI** | Zero setup, no API key needed, no rate limits for reasonable usage, and built into LangChain Community. Eliminates an entire dependency on paid search APIs. |
-| **Yahoo Finance (unofficial)** | Free, no API key required, comprehensive data for US and international equities. The trade-off is reliability — some tickers may fail, which is why we built web-search fallback. |
+| **Serper.dev over DuckDuckGo/Tavily** | DuckDuckGo is often blocked by serverless environments (like Vercel), while Serper is an official Google Search API with a generous free tier (2,500/month) and highly reliable JSON parsing. |
+| **Search-based Financials over Yahoo** | Yahoo Finance's unofficial API blocks Vercel IPs. We replaced it with a search-based fallback: searching for the metrics via Serper and using Groq to extract structured financials. This works 100% of the time, though it sacrifices exact precision. |
 | **SSE over WebSockets** | Simpler to implement, works with serverless functions, and sufficient for unidirectional streaming. WebSockets would be overkill for this use case. |
 | **Sequential graph** | Each node depends on prior state (financials need the ticker, scoring needs financials + news). Parallel execution was considered for nodes 3-4 but adds complexity without significant latency savings. |
 
@@ -243,8 +244,8 @@ stock-based compensation remain concerns."
 │  └──────────┬──────────────┬──────────────────┘             │
 │             │              │                                │
 │    ┌────────▼───┐  ┌──────▼──────┐                         │
-│    │ DuckDuckGo │  │Yahoo Finance│                          │
-│    │  (free)    │  │  (unofficial)│                         │
+│    │ Serper.dev │  │ Groq LLM    │                          │
+│    │ Search API │  │ Extraction  │                         │
 │    └────────────┘  └─────────────┘                         │
 │                                                             │
 │    ┌─────────────────────────────┐                          │
@@ -262,8 +263,8 @@ stock-based compensation remain concerns."
 - **Framework**: Next.js 14 (App Router)
 - **Agent**: LangGraph.js (StateGraph)
 - **LLM**: Groq — Llama 3.3 70B Versatile (free tier)
-- **Search**: DuckDuckGo (free, no API key)
-- **Financials**: Yahoo Finance (unofficial API)
+- **Search**: Serper.dev API
+- **Financials**: Serper + Groq Extraction
 - **UI**: React 18, Tailwind CSS, Framer Motion
 - **Icons**: Lucide React
 - **Deployment**: Vercel (zero-config)

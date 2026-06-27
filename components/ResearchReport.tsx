@@ -137,7 +137,7 @@ export default function ResearchReport({ data }: ResearchReportProps) {
           </span>
         )}
         <span className="bg-[#1a1a24] border border-[#2a2a3a] px-3 py-1.5 rounded-lg">
-          Data sources: Yahoo Finance, DuckDuckGo Search
+          Data sources: Serper.dev Search
         </span>
       </motion.div>
     </motion.div>

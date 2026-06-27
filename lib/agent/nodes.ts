@@ -1,5 +1,5 @@
 import { ChatGroq } from "@langchain/groq";
-import { createWebSearch, fetchYahooFinance } from "./tools";
+import { createWebSearch } from "./tools";
 import { ResearchState, StepLog, FinancialMetrics } from "./state";
 
 // ── Shared LLM instance (lazy init to avoid build-time errors) ──
@@ -110,79 +110,61 @@ export async function fetchFinancialsNode(
   state: ResearchState
 ): Promise<Partial<ResearchState>> {
   try {
-    const metrics = await fetchYahooFinance(state.ticker);
+    const search = createWebSearch();
+    const results = await search.invoke(
+      `${state.company} ${state.ticker} P/E ratio revenue market cap financials 2024`
+    );
+
+    const parsed =
+      typeof results === "string" ? JSON.parse(results) : results;
+    const snippets = Array.isArray(parsed)
+      ? parsed.map((r: { content?: string }) => r.content || "").join("\n")
+      : String(results);
+
+    const response = await getLLM().invoke([
+      {
+        role: "system",
+        content: `Extract approximate financial metrics from these search results. Return JSON:
+{"peRatio": null, "forwardPE": null, "revenueGrowth": null, "profitMargins": null, "operatingMargins": null, "debtToEquity": null, "marketCap": null, "fiftyTwoWeekHigh": null, "fiftyTwoWeekLow": null, "currentPrice": null, "eps": null, "roe": null, "currentRatio": null, "dividendYield": null, "beta": null, "sector": null, "industry": null, "fullTimeEmployees": null}
+Use numbers (not strings). Use null for unknown values. For percentages like margins, use decimals (e.g., 0.25 for 25%).`,
+      },
+      {
+        role: "user",
+        content: `Company: ${state.company} (${state.ticker})\n\n${snippets}`,
+      },
+    ]);
+
+    const content =
+      typeof response.content === "string" ? response.content : "";
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    const estimatedMetrics: FinancialMetrics = jsonMatch
+      ? JSON.parse(jsonMatch[0])
+      : null;
 
     return {
-      financialData: metrics,
-      sector: metrics.sector || state.sector,
-      industry: metrics.industry || state.industry,
+      financialData: estimatedMetrics,
       steps: [
         makeStep(
           "fetch-financials",
           "Financial Data",
-          `Fetched financials for ${state.ticker} — P/E: ${metrics.peRatio?.toFixed(1) ?? "N/A"}, Market Cap: ${metrics.marketCap ? formatMarketCap(metrics.marketCap) : "N/A"}`,
+          `Fetched financial estimates via web search`,
           "done"
         ),
       ],
     };
-  } catch {
-    // Fallback: try web search for financial estimates
-    try {
-      const search = createWebSearch();
-      const results = await search.invoke(
-        `${state.company} ${state.ticker} financial data P/E ratio market cap revenue earnings`
-      );
-
-      const parsed =
-        typeof results === "string" ? JSON.parse(results) : results;
-      const snippets = Array.isArray(parsed)
-        ? parsed.map((r: { content?: string }) => r.content || "").join("\n")
-        : String(results);
-
-      const response = await getLLM().invoke([
-        {
-          role: "system",
-          content: `Extract approximate financial metrics from these search results. Return JSON:
-{"peRatio": null, "forwardPE": null, "revenueGrowth": null, "profitMargins": null, "operatingMargins": null, "debtToEquity": null, "marketCap": null, "fiftyTwoWeekHigh": null, "fiftyTwoWeekLow": null, "currentPrice": null, "eps": null, "roe": null, "currentRatio": null, "dividendYield": null, "beta": null, "sector": null, "industry": null, "fullTimeEmployees": null}
-Use numbers (not strings). Use null for unknown values. For percentages like margins, use decimals (e.g., 0.25 for 25%).`,
-        },
-        {
-          role: "user",
-          content: `Company: ${state.company} (${state.ticker})\n\n${snippets}`,
-        },
-      ]);
-
-      const content =
-        typeof response.content === "string" ? response.content : "";
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      const estimatedMetrics: FinancialMetrics = jsonMatch
-        ? JSON.parse(jsonMatch[0])
-        : null;
-
-      return {
-        financialData: estimatedMetrics,
-        steps: [
-          makeStep(
-            "fetch-financials",
-            "Financial Data",
-            `Yahoo Finance unavailable — used web-searched estimates`,
-            "done"
-          ),
-        ],
-      };
-    } catch {
-      return {
-        financialData: null,
-        steps: [
-          makeStep(
-            "fetch-financials",
-            "Financial Data",
-            `Could not retrieve financial data`,
-            "failed"
-          ),
-        ],
-      };
-    }
+  } catch (error) {
+    console.error("Financial fetch error:", error);
+    return {
+      financialData: null,
+      steps: [
+        makeStep(
+          "fetch-financials",
+          "Financial Data",
+          `Could not retrieve financial data`,
+          "failed"
+        ),
+      ],
+    };
   }
 }
 

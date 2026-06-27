@@ -1,10 +1,31 @@
-import { DuckDuckGoSearch } from "@langchain/community/tools/duckduckgo_search";
+
 import { DynamicTool } from "@langchain/core/tools";
 import { FinancialMetrics } from "./state";
 
-// ── DuckDuckGo Web Search (free, no API key needed) ─────────────
+// ── Serper Web Search (Serper.dev) ─────────────
 export function createWebSearch() {
-  return new DuckDuckGoSearch({ maxResults: 5 });
+  return {
+    invoke: async (query: string) => {
+      const response = await fetch("https://google.serper.dev/search", {
+        method: "POST",
+        headers: {
+          "X-API-KEY": process.env.SERPER_API_KEY || "",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ q: query, num: 5 }),
+      });
+      if (!response.ok) {
+        throw new Error(`Serper API error: ${response.status}`);
+      }
+      const data = await response.json();
+      const organic = data.organic || [];
+      return organic.map((item: any) => ({
+        title: item.title,
+        url: item.link,
+        content: item.snippet,
+      }));
+    },
+  };
 }
 
 // ── Yahoo Finance Fetcher ───────────────────────────────────────

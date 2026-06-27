@@ -14,7 +14,6 @@
     "@langchain/groq": "^0.1.2",
     "@langchain/langgraph": "^0.2.74",
     "clsx": "^2.1.1",
-    "duck-duck-scrape": "^2.2.7",
     "framer-motion": "^11.18.2",
     "langchain": "^0.3.37",
     "lucide-react": "^1.21.0",
