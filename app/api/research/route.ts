@@ -38,7 +38,7 @@ const nodeLabels: Record<string, { name: string; desc: string }> = {
   },
   fetchFinancialsNode: {
     name: "Financial Data",
-    desc: "Fetching financial metrics from Yahoo Finance",
+    desc: "Extracting financial metrics via web search",
   },
   searchNewsNode: {
     name: "News & Sentiment",
